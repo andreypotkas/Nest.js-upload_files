@@ -10,12 +10,15 @@ import {
   Put,
   Request,
   NotFoundException,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Express } from 'express';
+import { Express, Response } from 'express';
 import { DatabaseFile } from 'src/upload/entities/upload.entity';
 import { UploadService } from 'src/upload/upload.service';
+import { Readable } from 'stream';
 
 @Controller('user')
 export class UserController {
@@ -32,6 +35,25 @@ export class UserController {
   @Post()
   create(@Body() userDto: any) {
     return this.usersService.createUser(userDto);
+  }
+
+  // get avatar
+  @Get(':id/avatar/:image')
+  public async getAvatarByUserId(
+    @Param('id') id: number,
+    @Param('image') image: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<any> {
+    const file = await this.uploadService.getOneByUserId(id);
+
+    const stream = Readable.from(file.data);
+
+    response.set({
+      'Content-Disposition': `inline; filename="${file.filename}"`,
+      'Content-Type': 'image',
+    });
+
+    return new StreamableFile(stream);
   }
   // add avatar
   @Post('avatar')
